@@ -1,0 +1,385 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Neuer Arbeitsbericht</h1>
+
+<img src="/static/logo.png" style="height:80px;margin-bottom:20px">
+
+<div id="successMessage" style="display:none;background:#d4edda;color:#155724;padding:15px;border-radius:6px;margin-bottom:20px">
+Bericht erfolgreich erstellt.
+</div>
+
+<form id="berichtForm" action="/bericht" method="POST" enctype="multipart/form-data">
+
+<h3>MadLeaf – Arbeitsbericht</h3>
+
+<p>Dr. Giuseppe Maddalena</p>
+<p>Applied Entomology & Environmental Risk</p>
+<p>Schillerstraße 8 – 79369 Wyhl am Kaiserstuhl</p>
+<p>+49 163 3661630</p>
+<p>giuseppe.maddalena@madleaf.de</p>
+<p>www.madleaf.de</p>
+
+<hr>
+
+<h3>Kunde auswählen</h3>
+
+<select name="kunde" id="kunde_select" onchange="fillCustomerData()" style="width:100%;font-size:16px">
+
+{% for customer in customers %}
+<option value="{{ customer.name }}">{{ customer.name }}</option>
+{% endfor %}
+
+</select>
+
+<input type="hidden" name="kunde_email">
+<input type="hidden" name="kunde_phone">
+<input type="hidden" name="kunde_address">
+
+<hr>
+
+<h3>Arbeitszeit</h3>
+
+<div style="display:flex;align-items:center;gap:10px">
+
+<div id="timerLight" style="width:14px;height:14px;border-radius:50%;background:red"></div>
+
+<input type="text" name="arbeitszeit" id="arbeitszeit" value="0 Sekunden" readonly style="font-weight:bold">
+
+</div>
+
+<input type="hidden" name="startzeit" id="startzeit">
+<input type="hidden" name="endzeit" id="endzeit">
+
+<br>
+
+<button type="button" onclick="startTimer()">START</button>
+<button type="button" onclick="stopTimer()">STOP</button>
+
+<hr>
+
+<h3>Arbeitsbeschreibung</h3>
+
+<textarea name="beschreibung" id="beschreibung" required style="width:100%;height:220px;font-size:15px"></textarea>
+
+<br><br>
+
+<h3>Schnellberichte</h3>
+
+<button type="button" onclick="presetAdd(presetTexts[0])">Standortanalyse</button>
+<button type="button" onclick="presetAdd(presetTexts[1])">Stechmückenrisiko</button>
+<button type="button" onclick="presetAdd(presetTexts[2])">Zeckenexposition</button>
+<button type="button" onclick="presetAdd(presetTexts[3])">Monitoring Kontrolle</button>
+<button type="button" onclick="presetAdd(presetTexts[4])">Präventive Maßnahmen</button>
+<button type="button" onclick="presetAdd(presetTexts[5])">Monitoring Empfehlung</button>
+
+<hr>
+
+<h3>Datum</h3>
+
+<input type="date" name="datum" id="datum" style="font-size:16px">
+
+<hr>
+
+<h3>Kundenunterschrift</h3>
+
+<label>Name der unterschreibenden Person</label>
+<input type="text" name="signature_name" style="width:100%">
+
+<br><br>
+
+<canvas id="signature-pad"
+width="500"
+height="200"
+style="border:1px solid #000;background:white;width:100%;max-width:500px;touch-action:none"></canvas>
+
+<input type="hidden" name="signature_data" id="signature_data">
+
+<br>
+
+<button type="button" onclick="clearSignature()">Unterschrift löschen</button>
+
+<br><br>
+
+<label>
+<input type="checkbox" id="noSignatureCheck" onclick="toggleReason()">
+Keine Kundenunterschrift möglich
+</label>
+
+<br><br>
+
+<textarea name="signature_reason"
+id="signature_reason"
+placeholder="Begründung eingeben"
+style="width:100%;height:120px;display:none"></textarea>
+
+<hr>
+
+<h3>Fotos hinzufügen</h3>
+
+<input type="file" name="photos" id="photoInput" multiple accept="image/*">
+
+<div id="preview" style="display:flex;flex-wrap:wrap;margin-top:10px"></div>
+
+<br>
+
+<label>Kommentar zur Fotoaufnahme</label>
+
+<textarea name="photo_comment"
+style="width:100%;height:120px"></textarea>
+
+<hr>
+
+<button type="submit" id="submitBtn" style="font-size:18px;padding:12px">
+PDF erstellen
+</button>
+
+</form>
+
+<br>
+
+<a href="/">
+<button style="font-size:16px">
+Zurück zum Dashboard
+</button>
+</a>
+
+<script>
+
+let customers = {{ customers|tojson }};
+
+function fillCustomerData(){
+
+let index=document.getElementById("kunde_select").selectedIndex;
+let customer=customers[index];
+
+if(customer){
+document.querySelector("[name='kunde_email']").value=customer.email||"";
+document.querySelector("[name='kunde_phone']").value=customer.phone||"";
+document.querySelector("[name='kunde_address']").value=customer.address||"";
+}
+
+}
+
+window.onload=function(){
+fillCustomerData();
+};
+
+/* TIMER */
+
+let startTime;
+let timerInterval;
+let timerRunning=false;
+
+function startTimer(){
+
+if(timerRunning) return;
+
+document.getElementById("timerLight").style.background="green";
+
+startTime=new Date();
+
+let startString=startTime.getHours().toString().padStart(2,'0')+":"+
+startTime.getMinutes().toString().padStart(2,'0');
+
+document.getElementById("startzeit").value=startString;
+
+timerRunning=true;
+
+timerInterval=setInterval(function(){
+
+let now=new Date();
+let seconds=Math.floor((now-startTime)/1000);
+
+let h=Math.floor(seconds/3600);
+let m=Math.floor((seconds%3600)/60);
+let s=seconds%60;
+
+document.getElementById("arbeitszeit").value=
+h+"h "+m+"m "+s+"s";
+
+},1000);
+
+}
+
+function stopTimer(){
+
+clearInterval(timerInterval);
+timerRunning=false;
+
+document.getElementById("timerLight").style.background="red";
+
+let endTime=new Date();
+
+let endString=endTime.getHours().toString().padStart(2,'0')+":"+
+endTime.getMinutes().toString().padStart(2,'0');
+
+document.getElementById("endzeit").value=endString;
+
+}
+
+/* DATA */
+
+let today=new Date();
+today.setMinutes(today.getMinutes()-today.getTimezoneOffset());
+
+document.getElementById("datum").value=
+today.toISOString().split("T")[0];
+
+/* FIRMA */
+
+let canvas=document.getElementById("signature-pad");
+let ctx=canvas.getContext("2d");
+
+ctx.strokeStyle="black";
+ctx.lineWidth=2;
+
+let drawing=false;
+
+canvas.addEventListener("mousedown",e=>{
+drawing=true;
+ctx.beginPath();
+ctx.moveTo(e.offsetX,e.offsetY);
+});
+
+canvas.addEventListener("mousemove",e=>{
+if(!drawing)return;
+ctx.lineTo(e.offsetX,e.offsetY);
+ctx.stroke();
+});
+
+canvas.addEventListener("mouseup",()=>drawing=false);
+canvas.addEventListener("mouseleave",()=>drawing=false);
+
+canvas.addEventListener("touchstart",e=>{
+
+e.preventDefault();
+
+let rect=canvas.getBoundingClientRect();
+let touch=e.touches[0];
+
+drawing=true;
+
+ctx.beginPath();
+ctx.moveTo(
+touch.clientX-rect.left,
+touch.clientY-rect.top
+);
+
+},{passive:false});
+
+canvas.addEventListener("touchmove",e=>{
+
+e.preventDefault();
+
+if(!drawing)return;
+
+let rect=canvas.getBoundingClientRect();
+let touch=e.touches[0];
+
+ctx.lineTo(
+touch.clientX-rect.left,
+touch.clientY-rect.top
+);
+
+ctx.stroke();
+
+},{passive:false});
+
+canvas.addEventListener("touchend",()=>drawing=false);
+
+function clearSignature(){
+ctx.clearRect(0,0,canvas.width,canvas.height);
+ctx.beginPath();
+document.getElementById("signature_data").value="";
+}
+
+function toggleReason(){
+
+let field=document.getElementById("signature_reason");
+let check=document.getElementById("noSignatureCheck");
+
+if(check.checked){
+field.style.display="block";
+}else{
+field.style.display="none";
+field.value="";
+}
+
+}
+
+document.getElementById("berichtForm").addEventListener("submit",function(){
+
+if(timerRunning){
+stopTimer();
+}
+
+if(!document.getElementById("noSignatureCheck").checked){
+let dataURL=canvas.toDataURL("image/png");
+document.getElementById("signature_data").value=dataURL;
+}
+
+document.getElementById("submitBtn").disabled=true;
+
+document.getElementById("successMessage").style.display="block";
+
+});
+
+const presetTexts=[
+
+"Standortbegehung zur Bewertung ökologischer Bedingungen und potenzieller biologischer Risikofaktoren in den Außenbereichen der Anlage durchgeführt.",
+
+"Mikrohabitate und Wasseransammlungen im Hinblick auf ihre mögliche Bedeutung als Entwicklungsorte für Stechmücken bewertet.",
+
+"Vegetationsstrukturen und Übergangsbereiche zwischen Grünflächen und Wegen hinsichtlich potenzieller Zeckenexposition bewertet.",
+
+"Kontrolle und Monitoring der installierten Fallen durchgeführt sowie aktuelle Aktivität der Zielorganismen dokumentiert.",
+
+"Empfehlungen zur präventiven Anpassung von Umwelt- und Habitatstrukturen zur Reduktion potenzieller Insektenrisiken gegeben.",
+
+"Empfehlung zur Einrichtung eines strukturierten Monitorings zur Beobachtung der saisonalen Entwicklung der Insektenaktivität ausgesprochen."
+
+];
+
+function presetAdd(text){
+
+let area=document.getElementById("beschreibung");
+
+if(area.value.trim()!==""){
+area.value+="\n\n";
+}
+
+area.value+=text;
+
+}
+
+document.getElementById("photoInput").addEventListener("change",function(){
+
+let preview=document.getElementById("preview");
+preview.innerHTML="";
+
+for(let file of this.files){
+
+let reader=new FileReader();
+
+reader.onload=function(e){
+
+let img=document.createElement("img");
+img.src=e.target.result;
+img.style.height="80px";
+img.style.margin="5px";
+
+preview.appendChild(img);
+
+}
+
+reader.readAsDataURL(file);
+
+}
+
+});
+
+</script>
+
+{% endblock %}

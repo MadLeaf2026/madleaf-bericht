@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Berichte Archiv</h1>
+
+<p>Hier finden Sie alle generierten Arbeitsberichte.</p>
+
+<table style="width:100%;border-collapse:collapse;margin-top:30px">
+
+<tr style="background:#1e5f3c;color:white">
+
+<th style="padding:10px;text-align:left">Kunde</th>
+<th style="padding:10px;text-align:left">Datum</th>
+<th style="padding:10px;text-align:left">Aktionen</th>
+
+</tr>
+
+{% for file in files %}
+
+{% set name = file.replace('.pdf','') %}
+{% set parts = name.split('_') %}
+
+{% if parts|length >= 4 %}
+{% set datum = parts[2] %}
+{% set kunde = parts[3:] | join(' ') %}
+{% else %}
+{% set datum = "-" %}
+{% set kunde = file %}
+{% endif %}
+
+<tr style="border-bottom:1px solid #ddd">
+
+<td style="padding:10px;font-weight:bold">
+{{ kunde|replace('_',' ')|title }}
+</td>
+
+<td style="padding:10px">
+{{ datum }}
+</td>
+
+<td style="padding:10px">
+
+<a href="/view/{{ file }}" target="_blank">
+<button>Öffnen</button>
+</a>
+
+<a href="/download/{{ file }}">
+<button>Download</button>
+</a>
+
+<a href="/delete_report/{{ file }}"
+onclick="return confirm('Bericht wirklich löschen?')">
+<button style="background:#b02a2a;color:white">Löschen</button>
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</table>
+
+{% endblock %}

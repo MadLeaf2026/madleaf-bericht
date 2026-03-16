@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MadLeaf Bericht System</title>
+
+<!-- ICONA BROWSER -->
+<link rel="icon" href="/static/logo.png">
+
+<!-- PWA -->
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#1e5f3c">
+
+<!-- APPLE SUPPORT -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="/static/logo.png">
+
+<meta name="description" content="Sistema di gestione Arbeitsberichte MadLeaf">
+
+<style>
+
+body{
+font-family: Arial;
+background:#eef3ef;
+margin:0;
+}
+
+/* HEADER */
+
+.topbar{
+background:#1e5f3c;
+color:white;
+padding:15px;
+display:flex;
+align-items:center;
+justify-content:space-between;
+}
+
+.logo{
+height:40px;
+margin-right:15px;
+}
+
+/* NAVIGATION */
+
+.menu a{
+text-decoration:none;
+}
+
+.menu button{
+background:white;
+color:#1e5f3c;
+border:none;
+padding:8px 14px;
+margin-left:8px;
+border-radius:5px;
+cursor:pointer;
+font-weight:bold;
+}
+
+.menu button:hover{
+background:#e3efe7;
+}
+
+/* CONTENT */
+
+.container{
+padding:40px;
+max-width:1000px;
+margin:auto;
+background:white;
+box-shadow:0 0 10px rgba(0,0,0,0.08);
+border-radius:8px;
+margin-top:30px;
+}
+
+/* BUTTON STYLE */
+
+button{
+background:#1e5f3c;
+color:white;
+border:none;
+padding:12px 18px;
+border-radius:6px;
+margin:10px;
+cursor:pointer;
+font-size:16px;
+}
+
+button:hover{
+background:#2e7a53;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="topbar">
+
+<div style="display:flex;align-items:center">
+<img src="/static/logo.png" class="logo">
+<b>MadLeaf – Arbeitsbericht System</b>
+</div>
+
+<div class="menu">
+
+<a href="/">
+<button>Dashboard</button>
+</a>
+
+<a href="/bericht">
+<button>Neuer Bericht</button>
+</a>
+
+<a href="/kunden">
+<button>Kunden</button>
+</a>
+
+<a href="/berichte">
+<button>Berichte</button>
+</a>
+
+</div>
+
+</div>
+
+<div class="container">
+{% block content %}
+{% endblock %}
+</div>
+
+<!-- SERVICE WORKER -->
+
+<script>
+
+if ('serviceWorker' in navigator) {
+
+navigator.serviceWorker.register('/static/service_worker.js')
+.then(function(){
+console.log("Service Worker registrato");
+})
+.catch(function(error){
+console.log("Errore Service Worker:",error);
+});
+
+}
+
+</script>
+
+</body>
+</html>
