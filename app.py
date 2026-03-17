@@ -9,75 +9,114 @@ import base64
 import textwrap
 from PIL import Image
 
-# -------- NUOVI IMPORT EMAIL --------
 import smtplib
 from email.message import EmailMessage
-# -----------------------------------
 
 app = Flask(__name__)
 
-BASE_FOLDER = "C:/Users/peppe/OneDrive/BERICHT_APP"
+# -------------------------------
+# BASE FOLDER SERVER (Render)
+# -------------------------------
+
+BASE_FOLDER = "data"
 
 REPORT_FOLDER = os.path.join(BASE_FOLDER, "reports")
 UPLOAD_FOLDER = os.path.join(BASE_FOLDER, "uploads")
 SIGNATURE_FOLDER = os.path.join(BASE_FOLDER, "signatures")
 
+# -------------------------------
+# ONEDRIVE BACKUP (LOCALE)
+# -------------------------------
+
+ONEDRIVE_BASE = r"C:\Users\peppe\OneDrive\BERICHT_APP"
+
+ONEDRIVE_REPORTS = os.path.join(ONEDRIVE_BASE, "reports")
+ONEDRIVE_UPLOADS = os.path.join(ONEDRIVE_BASE, "uploads")
+ONEDRIVE_SIGNATURES = os.path.join(ONEDRIVE_BASE, "signatures")
+
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SIGNATURE_FOLDER'] = SIGNATURE_FOLDER
 
-
-# -------- CONFIG EMAIL (AGGIUNTO) --------
+# -------------------------------
+# EMAIL CONFIG
+# -------------------------------
 
 SMTP_SERVER = "smtp.udag.de"
 SMTP_PORT = 587
 EMAIL_ADDRESS = "giuseppe.maddalena@madleaf.de"
-EMAIL_PASSWORD = "19Scurcione81!"
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD")
 
-# invia copia a te
 EMAIL_CC = "giuseppe.maddalena@madleaf.de"
+
+
+# -------------------------------
+# EMAIL INVIO STABILE
+# -------------------------------
 
 def send_report_email(receiver, pdf_path):
 
-    try:
+    for attempt in range(3):
 
-        msg = EmailMessage()
+        try:
 
-        msg["Subject"] = "MadLeaf – Arbeitsbericht"
-        msg["From"] = EMAIL_ADDRESS
-        msg["To"] = receiver
-        msg["Cc"] = EMAIL_CC
+            msg = EmailMessage()
 
-        msg.set_content(
-"""Sehr geehrte Damen und Herren,
+            msg["Subject"] = "MadLeaf – Arbeitsbericht"
+            msg["From"] = EMAIL_ADDRESS
+            msg["To"] = receiver
+            msg["Cc"] = EMAIL_CC
+
+            msg.set_content(
+                """Sehr geehrte Damen und Herren,
 
 anbei erhalten Sie den Arbeitsbericht der heutigen Begehung.
 
-Mit freundlichen Grüßen"""
-        )
+Mit freundlichen Grüßen
 
-        with open(pdf_path, "rb") as f:
-            file_data = f.read()
-            file_name = os.path.basename(pdf_path)
+MadLeaf"""
+            )
 
-        msg.add_attachment(file_data, maintype="application", subtype="pdf", filename=file_name)
+            with open(pdf_path, "rb") as f:
+                file_data = f.read()
+                file_name = os.path.basename(pdf_path)
 
-        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10) as server:
+            msg.add_attachment(
+                file_data,
+                maintype="application",
+                subtype="pdf",
+                filename=file_name
+            )
 
-            server.starttls()
-            server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-            server.send_message(msg)
+            with smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=30) as server:
 
-        print("Email erfolgreich gesendet")
+                server.starttls()
+                server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+                server.send_message(msg)
 
-    except Exception as e:
+            print("Email erfolgreich gesendet")
 
-        # NON blocca l'app
-        print("Email Fehler:", e)
+            return True
 
-# -----------------------------------------
+        except Exception as e:
+
+            print(f"Email Versuch {attempt+1} fehlgeschlagen:", e)
+
+    return False
 
 
-for folder in [REPORT_FOLDER, UPLOAD_FOLDER, SIGNATURE_FOLDER]:
+# -------------------------------
+# CARTELLE CREAZIONE
+# -------------------------------
+
+for folder in [
+    REPORT_FOLDER,
+    UPLOAD_FOLDER,
+    SIGNATURE_FOLDER,
+    ONEDRIVE_REPORTS,
+    ONEDRIVE_UPLOADS,
+    ONEDRIVE_SIGNATURES
+]:
+
     if not os.path.exists(folder):
         os.makedirs(folder)
 
@@ -125,6 +164,7 @@ def bericht():
             signature_bytes = base64.b64decode(signature_data)
 
             signature_filename = f"signature_{datetime.datetime.now().timestamp()}.png"
+
             signature_path = os.path.join(SIGNATURE_FOLDER, signature_filename)
 
             with open(signature_path, "wb") as f:
@@ -147,12 +187,11 @@ def bericht():
                 photo.save(save_path)
 
                 try:
+
                     img = Image.open(save_path)
 
-                    # ---------- COMPRESSIONE MIGLIORATA ----------
                     img.thumbnail((1200,1200))
                     img.save(save_path, optimize=True, quality=55)
-                    # --------------------------------------------
 
                 except:
                     pass
@@ -167,18 +206,25 @@ def bericht():
         if not os.path.exists(customer_folder):
             os.makedirs(customer_folder)
 
+        customer_folder_onedrive = os.path.join(ONEDRIVE_REPORTS, safe_kunde)
+
+        if not os.path.exists(customer_folder_onedrive):
+            os.makedirs(customer_folder_onedrive)
+
         filename = f"MadLeaf_Report_{datum}_{safe_kunde}.pdf"
+
         filepath = os.path.join(customer_folder, filename)
 
-        # -------- AGGIUNTO: EVITA SOVRASCRITTURA --------
         counter = 1
         while os.path.exists(filepath):
-            filename = f"MadLeaf_Report_{datum}_{safe_kunde}_{counter}.pdf"
-            filepath = os.path.join(customer_folder, filename)
-            counter += 1
-        # ------------------------------------------------
 
-        c = canvas.Canvas(filepath, pagesize=A4)
+            filename = f"MadLeaf_Report_{datum}_{safe_kunde}_{counter}.pdf"
+
+            filepath = os.path.join(customer_folder, filename)
+
+            counter += 1
+
+        c = canvas.Canvas(filepath, pagesize=A4, pageCompression=1)
 
         width, height = A4
 
@@ -226,24 +272,33 @@ def bericht():
             c.drawString(width/2 - 20, 20, f"Seite {c.getPageNumber()}")
 
             if os.path.exists("static/Signature_giuseppe.png"):
+
                 c.drawImage(
                     "static/Signature_giuseppe.png",
                     50,
-                    30,
+                    35,
                     width=110,
                     height=40,
                     mask='auto'
                 )
 
+                c.setFont("Helvetica", 9)
+                c.drawString(50, 25, "Dr. Giuseppe Maddalena")
+
             if signature_path:
+
                 c.drawImage(
                     signature_path,
                     width - 160,
-                    30,
+                    35,
                     width=110,
                     height=40,
                     mask='auto'
                 )
+
+                if signature_name:
+                    c.setFont("Helvetica", 9)
+                    c.drawRightString(width - 50, 25, signature_name)
 
         draw_header(True)
 
@@ -288,33 +343,8 @@ def bericht():
             c.drawString(50, y, line)
             y -= 15
 
+        # -------- PAGINA FOTO --------
 
-        # ----------- NUOVO BLOCCO FIRMA MOTIVAZIONE -----------
-        if signature_reason:
-
-            y -= 20
-
-            reason_lines = textwrap.wrap(
-                f"Keine Unterschrift möglich: {signature_reason}",
-                90
-            )
-
-            for line in reason_lines:
-
-                if y < 120:
-
-                    draw_footer()
-                    c.showPage()
-                    draw_header(False)
-
-                    y = height - 80
-
-                c.drawString(50, y, line)
-                y -= 15
-        # ------------------------------------------------------
-
-
-        # -------- AGGIUNTO: PAGINA FOTO --------
         if photo_paths:
 
             draw_footer()
@@ -363,16 +393,23 @@ def bericht():
                 )
 
                 y -= new_height + 20
-        # --------------------------------------
-
 
         draw_footer()
         c.save()
 
-        # -------- INVIO EMAIL (AGGIUNTO) --------
+        try:
+
+            backup_path = os.path.join(customer_folder_onedrive, os.path.basename(filepath))
+
+            with open(filepath, "rb") as src, open(backup_path, "wb") as dst:
+                dst.write(src.read())
+
+        except Exception as e:
+
+            print("Backup OneDrive Fehler:", e)
+
         if kunde_data and kunde_data.get("email"):
             send_report_email(kunde_data.get("email"), filepath)
-        # ----------------------------------------
 
         return redirect("/")
 

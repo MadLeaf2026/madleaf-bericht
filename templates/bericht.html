@@ -54,8 +54,19 @@ Bericht erfolgreich erstellt.
 
 <br>
 
-<button type="button" onclick="startTimer()">START</button>
-<button type="button" onclick="stopTimer()">STOP</button>
+<button id="timerButton" type="button"
+style="
+font-size:22px;
+padding:18px 40px;
+background:#2c7a4b;
+color:white;
+border:none;
+border-radius:8px;
+cursor:pointer;
+box-shadow:0 4px 10px rgba(0,0,0,0.2);
+">
+START
+</button>
 
 <hr>
 
@@ -163,61 +174,117 @@ document.querySelector("[name='kunde_address']").value=customer.address||"";
 }
 
 window.onload=function(){
+
 fillCustomerData();
+
+restoreTimer()
+
 };
 
-/* TIMER */
+/* TIMER PROFESSIONALE */
 
-let startTime;
-let timerInterval;
-let timerRunning=false;
+let timerInterval
+let timerRunning=false
+
+function toggleTimer(){
+
+if(timerRunning){
+
+stopTimer()
+
+}else{
+
+startTimer()
+
+}
+
+}
 
 function startTimer(){
 
-if(timerRunning) return;
+let startTime=new Date()
 
-document.getElementById("timerLight").style.background="green";
+localStorage.setItem("madleaf_timer_start",startTime)
 
-startTime=new Date();
+document.getElementById("timerLight").style.background="green"
+
+document.getElementById("timerButton").innerText="STOP"
 
 let startString=startTime.getHours().toString().padStart(2,'0')+":"+
-startTime.getMinutes().toString().padStart(2,'0');
+startTime.getMinutes().toString().padStart(2,'0')
 
-document.getElementById("startzeit").value=startString;
+document.getElementById("startzeit").value=startString
 
-timerRunning=true;
+timerRunning=true
+
+runTimer()
+
+}
+
+function runTimer(){
 
 timerInterval=setInterval(function(){
 
-let now=new Date();
-let seconds=Math.floor((now-startTime)/1000);
+let savedStart=localStorage.getItem("madleaf_timer_start")
 
-let h=Math.floor(seconds/3600);
-let m=Math.floor((seconds%3600)/60);
-let s=seconds%60;
+if(!savedStart) return
+
+let start=new Date(savedStart)
+let now=new Date()
+
+let seconds=Math.floor((now-start)/1000)
+
+let h=Math.floor(seconds/3600)
+let m=Math.floor((seconds%3600)/60)
+let s=seconds%60
 
 document.getElementById("arbeitszeit").value=
-h+"h "+m+"m "+s+"s";
+h+"h "+m+"m "+s+"s"
 
-},1000);
+},1000)
 
 }
 
 function stopTimer(){
 
-clearInterval(timerInterval);
-timerRunning=false;
+clearInterval(timerInterval)
 
-document.getElementById("timerLight").style.background="red";
-
-let endTime=new Date();
+let endTime=new Date()
 
 let endString=endTime.getHours().toString().padStart(2,'0')+":"+
-endTime.getMinutes().toString().padStart(2,'0');
+endTime.getMinutes().toString().padStart(2,'0')
 
-document.getElementById("endzeit").value=endString;
+document.getElementById("endzeit").value=endString
+
+localStorage.removeItem("madleaf_timer_start")
+
+document.getElementById("timerLight").style.background="red"
+
+document.getElementById("timerButton").innerText="START"
+
+timerRunning=false
 
 }
+
+function restoreTimer(){
+
+let savedStart=localStorage.getItem("madleaf_timer_start")
+
+if(savedStart){
+
+timerRunning=true
+
+document.getElementById("timerButton").innerText="STOP"
+
+document.getElementById("timerLight").style.background="green"
+
+runTimer()
+
+}
+
+}
+
+document.getElementById("timerButton").addEventListener("click",toggleTimer)
 
 /* DATA */
 
